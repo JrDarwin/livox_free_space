@@ -1,6 +1,10 @@
 # Livox-Free-Space
 
+**添加注释并整理了逻辑结构**  
 
+<div align="center">
+<img src="./data/codeLogstic.png" width="850px">
+</div>
 
 **Livox-Free-Space** is a fast and effective free-space detection package using [Livox](www.livoxtech.com) LiDAR data. It based on traditional algorithm to segment 3D LiDAR data and generate free-space.
 

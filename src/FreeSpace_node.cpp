@@ -140,6 +140,7 @@ void GenerateFreeSpace(pcl::PointCloud<pcl::PointXYZI> & pc)
     int dnum = pc.points.size();
     std::cout << "Point cloud size: " << dnum << std::endl;
 
+    // 转换数据格式 
     float *data=(float*)calloc(dnum*4,sizeof(float));
     std::vector<float> free_space;
     for (int p=0; p<dnum; ++p)
@@ -149,6 +150,8 @@ void GenerateFreeSpace(pcl::PointCloud<pcl::PointXYZI> & pc)
         data[p*4+2] = pc.points[p].z;
         data[p*4+3] = pc.points[p].intensity;
     }       
+
+    // 计算freespace
     livox_free_space.GenerateFreeSpace(data, dnum, free_space);
     t1 = clock();
 
@@ -212,16 +215,18 @@ int main(int argc, char **argv)
 
     ros::Subscriber sub_pc;
     sub_pc = n.subscribe("/points_raw", 10, PointCloudCallback);
-    fs_points_pub = n.advertise<sensor_msgs::PointCloud2>("fs_pointcloud/pointcloud", 10);
-    fs_distance_circle_pub  = n.advertise<visualization_msgs::MarkerArray>("fs_marker/circle", 10);
-    fs_distance_text_pub  = n.advertise<visualization_msgs::MarkerArray>("fs_marker/dis_text", 10);
-    fs_pub = n.advertise<sensor_msgs::PointCloud2>("/fs_pointcloud/free_space", 10);
+    fs_points_pub = n.advertise<sensor_msgs::PointCloud2>("fs_pointcloud/pointcloud", 10);          // 发布原始点云
+    fs_distance_circle_pub  = n.advertise<visualization_msgs::MarkerArray>("fs_marker/circle", 10); // 发布可视化的圆圈
+    fs_distance_text_pub  = n.advertise<visualization_msgs::MarkerArray>("fs_marker/dis_text", 10); // 发布可视化的文字
+    fs_pub = n.advertise<sensor_msgs::PointCloud2>("/fs_pointcloud/free_space", 10);  // Freespace检测结果
 
     ros::Rate rate(20);
     bool status = ros::ok();
     while (status) 
     {
         ros::spinOnce();
+
+        // 发布可视化的文字和圆形标记
         if (!is_background_pub)
         {
             PrepareBackground();
@@ -229,15 +234,24 @@ int main(int argc, char **argv)
         }
         fs_distance_circle_pub.publish(circles);
         fs_distance_text_pub.publish(texts);
+
+
         pcl::PointCloud<pcl::PointXYZI> pc;
 
-        if(recieved_pc_msg_flag)
+        if(recieved_pc_msg_flag)  // 收到点云时会置true，收到的额消息存放在this_pc_msg中
         {
-            pcl::fromROSMsg (*this_pc_msg, pc);
+            // 格式转换
+            pcl::fromROSMsg (*this_pc_msg, pc);  
+
+            // height_offset根据雷达实际的安装高度确定，尽量将地面偏移至0处
             for (int i = 0; i < pc.points.size(); i++)
                 pc.points[i].z = pc.points[i].z + height_offset;
+
             gheader = this_pc_msg->header;
+
+            // 计算Freespace
             GenerateFreeSpace(pc);
+
             recieved_pc_msg_flag = false;
         }
 
